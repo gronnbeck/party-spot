@@ -15,7 +15,7 @@
     
     window.onload = function() {
 
-        Parse.initialize(config.appid, js_key);
+        Parse.initialize(config.appid, config.js_key);
            
         playlist = new models.Playlist();
         var list = new views.List(playlist);
@@ -100,11 +100,16 @@
     }
     
     /**
-    * @param input: Object that contains track reference, and a success and error callback function
+    * input = {
+    *       track: "a track object",
+    *       on: "a callback function when everything went as it should",
+    *       track_map: "maps hrefs to parse Tracks",
+    *       error: "callback function for handling errors"
+    * }
     **/
     var trackPlayed = function(input) {
         var href = trackUri(input.track); 
-        var parse_track = parse_object_href_map[href];
+        var parse_track = input.track_map[href];
         parse_track.set("votes", 0);
         
         parse_track.save(null, {
