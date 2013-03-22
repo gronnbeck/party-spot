@@ -86,7 +86,12 @@
     }
 
     var queue = function(href, playlist) {
-        track = models.Track.fromURI(href);
+        var track = models.Track.fromURI(href);
+        var tracks = playlist.tracks;
+        if (_.filter(_.map(tracks, trackUri), function(saved_href) { saved_href === href }).lenght > 0) {
+            console.log("Will not queue a song that has already been added");
+            return;
+        }  
         playlist.add(track);
     }
 
