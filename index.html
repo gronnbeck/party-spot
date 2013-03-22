@@ -21,18 +21,32 @@
         playlist = new models.Playlist();
         var list = new views.List(playlist);
         
-        loadTracks({ 
-            on: function(tracks) {
-                _.each(tracks, function(parse_track) {
-                    href = parse_track.attributes.href;
-                    obj = {}; 
-                    obj[href] = parse_track;
-                    parse_object_href_map = _.extend(parse_object_href_map, obj);  
-                    queue(href, playlist);  
-                });
-            }
-         });
-         
+        load = function(after, on) { 
+            loadTracks({ 
+                on: function(tracks) {
+                    _.each(tracks, function(parse_track) {
+                        href = parse_track.attributes.href;
+                        obj = {}; 
+                        obj[href] = parse_track;
+                        parse_object_href_map = _.extend(parse_object_href_map, obj);  
+                        queue(href, playlist);  
+                    });
+                    on(tracks);
+                },
+                after: after
+            }); 
+        }
+
+        var timestamp = new Date(0); 
+        var t = setInterval(function () {
+            load(timestamp, function (tracks) {
+                if (tracks.length <= 0) return; 
+                console.log(tracks);
+                timestamp = _.last(tracks).updatedAt;
+            });
+        }, 5000);
+
+ 
          // note: you can also customize columns by using
         var list = new views.List(playlist , function (track) {
                 return new views.Track(track, 
@@ -78,7 +92,10 @@
 
     var loadTracks = function(input) {
         var query = new Parse.Query("Tracks");
-        query.greaterThan("votes", 0); 
+        query.greaterThan("votes", 0);
+        if (input.after != null) {
+            query.greaterThan("updatedAt", input.after); 
+        } 
         var sortByVotes = function(parse_tracks) {
             return _.clone(parse_tracks).sort(function (a,b) {
                 votes_of_a = a.attributes.votes;
@@ -131,12 +148,6 @@
 
     var trackUri = function(track) {
         return track.data.uri;
-    }
-
-    var previousTrack = function(playlist, current_track) {
-        if (current_track == null) return playlist.tracks[0];
-        previousTrackIndex = Math.abs((indexOfTrack(playlist, current_track) - 1) % _.size(playlist.tracks)); 
-        return playlist.tracks[previousTrackIndex];
     }
 
 
