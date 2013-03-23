@@ -11,18 +11,30 @@
     var models = sp.require("$api/models");
     var views = sp.require("$api/views");
     var playlist;
+    var player;
     var parse_object_href_map = {}; 
     
     window.onload = function() {
 
         Parse.initialize(config.appid, config.js_key);
         resetTestData();
-           
+        
+        // As for now I was not able to use the playlist with the Spotify player as an immutable object.
+        // Thus, we are using models.Playlist as an mutable object even though I do not like it that much.
+        // Even though some parts of the code is mutable, I'll try to code the rest as functional as possible.
         playlist = new models.Playlist();
         var list = new views.List(playlist);
+        models.player.context = playlist;
+
+        /* Append a player */
+        var multiple_tracks_player_HTML = document.getElementById('multiple-tracks-player');
+        player = new views.Player();
+        multiple_tracks_player_HTML.appendChild(player.node);
+
+        player.context = playlist;  
         
         load = function(after, on) { 
-            loadTracks({ 
+            loadTracks({
                 on: function(tracks) {
                     _.each(tracks, function(parse_track) {
                         href = parse_track.attributes.href;
@@ -31,6 +43,8 @@
                         parse_object_href_map = _.extend(parse_object_href_map, obj);  
                         queue(href, playlist);  
                     });
+
+
                     on(tracks);
                 },
                 after: after
@@ -41,7 +55,6 @@
         var t = setInterval(function () {
             load(timestamp, function (tracks) {
                 if (tracks.length <= 0) return; 
-                console.log(tracks);
                 timestamp = _.last(tracks).updatedAt;
             });
         }, 5000);
@@ -60,22 +73,18 @@
         
         document.getElementById('playlist').appendChild(list.node); 
         
-        /* Append a player */
-        var multiple_tracks_player_HTML = document.getElementById('multiple-tracks-player');
-        var player = new views.Player();
-        player.context = playlist;
-        multiple_tracks_player_HTML.appendChild(player.node);
-        
         models.player.observe(models.EVENT.CHANGE, function(event) {
             if (event.data.curtrack) {
+                if (models.player.track == null) return;
                 trackPlayed({ 
                     track: previousTrack(playlist, models.player.track),
                     track_map: parse_object_href_map,
                     on: function(track) {
-                        playlist.tracks = _.filter(playlist.tracks, function(playlist_track) { 
+                        filtered_tracks = _.filter(playlist.tracks, function(playlist_track) { 
                             return trackUri(playlist_track) !== trackUri(track);
                         });
-                        player.context = playlist;
+                        resortPlayList(playlist);
+
                     },
                     error: function (error) {
                         console.log("An error occured. Error was not handled due to: Error handling not implemented"); 
@@ -85,10 +94,21 @@
         }); 
     }
 
+    var resortPlayList = function (playlist) {
+        // clear
+        _.each(_.clone(playlist.tracks), function(track) {
+            playlist.remove(track);
+        });
+        // readd in the desired order
+        _.each(sortByVotes(filtered_tracks), function(track){ 
+            playlist.add(track); 
+        });
+    }
+
     var queue = function(href, playlist) {
         var track = models.Track.fromURI(href);
         var tracks = playlist.tracks;
-        if (_.filter(_.map(tracks, trackUri), function(saved_href) { saved_href === href }).lenght > 0) {
+        if (_.filter(_.map(tracks, trackUri), function(saved_href) { return saved_href === href; }).length > 0) {
             console.log("Will not queue a song that has already been added");
             return;
         }  
@@ -101,19 +121,10 @@
         if (input.after != null) {
             query.greaterThan("updatedAt", input.after); 
         } 
-        var sortByVotes = function(parse_tracks) {
-            return _.clone(parse_tracks).sort(function (a,b) {
-                votes_of_a = a.attributes.votes;
-                votes_of_b = b.attributes.votes;
-                if (a < b) return -1;
-                if (b < a) return 1;
-                return 0;
-            });
-        }
 
         query.find({ 
             success: function (results) {
-                input.on(sortByVotes(results));
+                input.on(results);
             }, 
             error: function (err) {
                 if (typeof input.error === "undefined") {
@@ -134,6 +145,7 @@
     * }
     **/
     var trackPlayed = function(input) {
+        if (input.track === "undefined") return;
         var href = trackUri(input.track); 
         var parse_track = input.track_map[href];
         parse_track.set("votes", 0);
@@ -161,7 +173,7 @@
         query.find({
             success: function (tracks) {
                 _.each(tracks, function(track) {
-                    track.set("votes", 2);
+                    track.set("votes", Math.ceil(Math.random()*10));
                     track.save(null, {
                         success: function (success) {
                         }
@@ -173,6 +185,27 @@
             }
         });
     } 
+
+    var previousTrack = function(playlist, current_track) {
+        if (current_track == null) return playlist.tracks[0];
+            previousTrackIndex = Math.abs((indexOfTrack(playlist, current_track) - 1) % _.size(playlist.tracks)); 
+            return playlist.tracks[previousTrackIndex];
+    }
+
+
+    var sortByVotes = function(parse_tracks) {
+        return _.clone(parse_tracks).sort(function (a,b) {
+            var votesByHref =  function(href) {   
+                parse_track = parse_object_href_map[href];
+                return parse_track.attributes.votes;
+            },
+            votes_of_a = votesByHref(trackUri(a));
+            votes_of_b = votesByHref(trackUri(b));
+            if (a > b) return -1;
+            if (b > a) return 1;
+            return 0;
+        });
+    }
 
 
 
