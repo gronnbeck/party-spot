@@ -24,7 +24,6 @@
         // Even though some parts of the code is mutable, I'll try to code the rest as functional as possible.
         playlist = new models.Playlist();
         var list = new views.List(playlist);
-        models.player.context = playlist;
 
         /* Append a player */
         var multiple_tracks_player_HTML = document.getElementById('multiple-tracks-player');
@@ -75,7 +74,6 @@
         
         models.player.observe(models.EVENT.CHANGE, function(event) {
             if (event.data.curtrack) {
-                if (models.player.track == null) return;
                 trackPlayed({ 
                     track: previousTrack(playlist, models.player.track),
                     track_map: parse_object_href_map,
@@ -85,6 +83,7 @@
                         });
                         resortPlayList(playlist);
 
+                        console.log("This happened");
                     },
                     error: function (error) {
                         console.log("An error occured. Error was not handled due to: Error handling not implemented"); 
@@ -97,7 +96,7 @@
     var resortPlayList = function (playlist) {
         // clear
         _.each(_.clone(playlist.tracks), function(track) {
-            playlist.remove(track);
+                            playlist.remove(track);
         });
         // readd in the desired order
         _.each(sortByVotes(filtered_tracks), function(track){ 
@@ -146,6 +145,7 @@
     **/
     var trackPlayed = function(input) {
         if (input.track === "undefined") return;
+        console.log("Track just played: " + input.track);
         var href = trackUri(input.track); 
         var parse_track = input.track_map[href];
         parse_track.set("votes", 0);
@@ -187,9 +187,7 @@
     } 
 
     var previousTrack = function(playlist, current_track) {
-        if (current_track == null) return playlist.tracks[0];
-            previousTrackIndex = Math.abs((indexOfTrack(playlist, current_track) - 1) % _.size(playlist.tracks)); 
-            return playlist.tracks[previousTrackIndex];
+        return playlist.tracks[0];
     }
 
 
