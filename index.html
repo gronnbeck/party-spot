@@ -75,13 +75,12 @@
         models.player.observe(models.EVENT.CHANGE, function(event) {
             if (event.data.curtrack) {
                 trackPlayed({ 
-                    track: previousTrack(playlist, models.player.track),
+                    track: _.first(playlist.tracks),
                     track_map: parse_object_href_map,
                     on: function(track) {
-                        filtered_tracks = _.filter(playlist.tracks, function(playlist_track) { 
-                            return trackUri(playlist_track) !== trackUri(track);
-                        });
-                        resortPlayList(playlist);
+                        
+                        // remove currently playing song from playlist
+                        playlist.remove(models.player.track);
 
                         console.log("This happened");
                     },
@@ -91,17 +90,6 @@
                 }); 
             } 
         }); 
-    }
-
-    var resortPlayList = function (playlist) {
-        // clear
-        _.each(_.clone(playlist.tracks), function(track) {
-                            playlist.remove(track);
-        });
-        // readd in the desired order
-        _.each(sortByVotes(filtered_tracks), function(track){ 
-            playlist.add(track); 
-        });
     }
 
     var queue = function(href, playlist) {
