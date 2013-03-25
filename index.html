@@ -34,15 +34,14 @@
         
         load = function(after, on) { 
             loadTracks({
-                on: function(tracks) {
-                    _.each(tracks, function(parse_track) {
+                on: function(tracks) {                    
+                    _.each(sortByVotes(tracks).reverse(), function(parse_track) {
                         href = parse_track.attributes.href;
                         obj = {}; 
                         obj[href] = parse_track;
                         parse_object_href_map = _.extend(parse_object_href_map, obj);  
                         queue(href, playlist);  
                     });
-
 
                     on(tracks);
                 },
@@ -55,6 +54,8 @@
             load(timestamp, function (tracks) {
                 if (tracks.length <= 0) return; 
                 timestamp = _.last(tracks).updatedAt;
+                
+                sortPlaylist(playlist, tracks);
             });
         }, 5000);
 
@@ -77,12 +78,10 @@
                 trackPlayed({ 
                     track: _.first(playlist.tracks),
                     track_map: parse_object_href_map,
-                    on: function(track) {
-                        
+                    on: function(track) {                        
                         // remove currently playing song from playlist
                         playlist.remove(models.player.track);
 
-                        console.log("This happened");
                     },
                     error: function (error) {
                         console.log("An error occured. Error was not handled due to: Error handling not implemented"); 
@@ -185,14 +184,30 @@
                 parse_track = parse_object_href_map[href];
                 return parse_track.attributes.votes;
             },
-            votes_of_a = votesByHref(trackUri(a));
-            votes_of_b = votesByHref(trackUri(b));
+            votes_of_a = a.attributes.votes;
+            votes_of_b = b.attributes.votes;
             if (a > b) return -1;
             if (b > a) return 1;
             return 0;
         });
     }
-
+    
+    /** This function is not "functional" but its the only way do move tracks inside a Spotify playlist **/
+    var sortPlaylist = function(playlist, parse_tracks) {
+        var hrefs = _.map(sortByVotes(parse_tracks), function(track) {
+            return track.attributes.href;
+        });
+        return _.each(hrefs, function(href, move_to) {
+            /** This part can be optimized. **/
+            _.each(playlist.tracks, function(track, move_from) {
+                if (track.data.uri === href) {
+                    playlist.data.move(move_from, move_to); 
+                    return;
+                }
+            });
+        });
+       
+    }
 
 
 </script> 
