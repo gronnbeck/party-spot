@@ -29,29 +29,78 @@
     		});
 		});	
 
-		loadTracks({
-			on: function (tracks) {
-				all_tracks = _.clone(all_tracks).concat(tracks);
-				refreshTracksView(all_tracks);
+
+		$("#search").delegate("li", "tap", function () {
+			/** should just push a track to the vote endpoint instead **/
+			var index = $(this).index();
+			var add_track = search_tracks[index];
+			var Track = Parse.Object.extend("Tracks");
+			var track = new Track();
+
+			track.set("href",add_track.href);
+			track.set("votes", 1);
+
+			console.log(index);
+			console.log(add_track.name);
+
+			track.save(null, {
+				success: function (track) {
+					console.log("Added a new track to the playlist");
+					load();
+				}
+			});
+			
+		});
+
+		var search_tracks = [];
+		$("#search").on( "listviewbeforefilter", function ( e, data ) {
+			var _input = $(data.input);
+			var _value = _input.val();
+			if (_value && _value.length > 3) {
+				$("#search").empty();
+				search_tracks = [];
+				$.getJSON("http://ws.spotify.com/search/1/track.json?q=" + _value, function (data) {
+					if (data.info.num_results <= 0) return;
+
+					search_tracks = _.clone(data.tracks);
+					$("#search").append(_.first(_.map(data.tracks, function (track) {
+						return "<li><a href='#'>" + track.name + "<br/>" +
+						"<small>" + artistNames(track.artists) + "</small>" +
+						"</a></li>" ;
+					}), 20).join(""));
+
+					// _.each(_.first(search_tracks, 20), function(track) {
+					// 	$("#search").append("<li><a class='up' href='#'>" + track.name + "<br/>" +
+					// 	"<small>" + artistNames(track.artists) + "</small>" +
+					// 	"</a></li>" );
+					// });
+					$("#search").listview("refresh");
+				});
+			} 
+			else {
+				$("#search").empty();
 			}
 		});
+
+		load();
 	}
 	var spotifyUrl = function(href) {
 		return "http://ws.spotify.com/lookup/1/.json?uri=" + href;
 	}
 
+	var artistNames = function (artists) {
+		return _.map(artists, function (artist) { 
+			return artist.name
+		}).join(", ");
+	}
+
 	var refreshTracksView = function (tracks) {
-		var _artistNames = function (artists) {
-			return _.map(artists, function (artist) { 
-				return artist.name
-			}).join(", ");
-		}
 		$(".tracks").empty();
-		
+
 		// ** xxx fucks up with the indexes **/
 		// $(".tracks").append("<li data-role='list-divider'>Playlist</li>")
 				// fix this later
-		var gear_link = '<a href="#other" data-rel="popup" data-position-to="window" data-transition="pop">Purchase album</a>'
+		var gear_link = '<a href="#other" data-rel="popup" data-position-to="window" data-transition="pop">Down vote</a>'
 		
 		all_tracks = sortByVotes(tracks);
 
@@ -59,7 +108,7 @@
 			/** Not optimized , so slow **/
 			$.getJSON(spotifyUrl(track.attributes.href), function (data) {
 				$(".tracks").append("<li><a class='up' href='#'>" + data.track.name + "<br/>" +
-					"<small>" + _artistNames(data.track.artists) + "</small>" +
+					"<small>" + artistNames(data.track.artists) + "</small>" +
 					"<span class='ui-li-count'>" + track.attributes.votes + "</span>" + 
 					"</a>" + gear_link + "</li>");
 				$(".tracks").listview("refresh");
@@ -67,9 +116,20 @@
 		});
 	}
 
+	var load = function () {
+		all_tracks = [];
+		loadTracks({
+			on: function (tracks) {
+				all_tracks = _.clone(all_tracks).concat(tracks);
+				refreshTracksView(all_tracks);
+			}
+		});
+	}
+
 </script>
 <body>
 
+<h2>Current playlist</h2>
 <ul class="tracks" data-role="listview" data-split-icon="gear">
 </ul>
 
@@ -80,5 +140,8 @@
     <a href="index.html" data-role="button" data-rel="back" data-inline="true" data-mini="true">No.</a>
 </div>
 
+
+<h2>Queue new songs</h2>
+<ul id="search" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="Title, Artist, or Album" data-filter-theme="d"></ul>
 
 </body>
