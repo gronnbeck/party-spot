@@ -5,6 +5,7 @@
 <script src="js/parse-1.2.2.js"></script>
 <script src="js/config.js"></script>
 <script src="js/underscore.js"></script>
+<script src="js/app.js"></script>
 <script>
 
     var sp = getSpotifyApi();
@@ -17,7 +18,7 @@
     window.onload = function() {
 
         Parse.initialize(config.appid, config.js_key);
-        resetTestData();
+        // resetTestData();
         
         // As for now I was not able to use the playlist with the Spotify player as an immutable object.
         // Thus, we are using models.Playlist as an mutable object even though I do not like it that much.
@@ -35,7 +36,7 @@
         load = function(after, on) { 
             loadTracks({
                 on: function(tracks) {                    
-                    _.each(sortByVotes(tracks).reverse(), function(parse_track) {
+                    _.each(sortByVotes(tracks), function(parse_track) {
                         href = parse_track.attributes.href;
                         obj = {}; 
                         obj[href] = parse_track;
@@ -55,9 +56,12 @@
                 if (tracks.length <= 0) return; 
                 timestamp = _.last(tracks).updatedAt;
                 
-                sortPlaylist(playlist, tracks);
+                var _all_tracks = _.map(parse_object_href_map, function (parse_track) {
+                    return parse_track;
+                });
+                sortPlaylist(playlist, _all_tracks);
             });
-        }, 5000);
+        }, 1000);
 
  
          // note: you can also customize columns by using
@@ -175,21 +179,6 @@
 
     var previousTrack = function(playlist, current_track) {
         return playlist.tracks[0];
-    }
-
-
-    var sortByVotes = function(parse_tracks) {
-        return _.clone(parse_tracks).sort(function (a,b) {
-            var votesByHref =  function(href) {   
-                parse_track = parse_object_href_map[href];
-                return parse_track.attributes.votes;
-            },
-            votes_of_a = a.attributes.votes;
-            votes_of_b = b.attributes.votes;
-            if (a > b) return -1;
-            if (b > a) return 1;
-            return 0;
-        });
     }
     
     /** This function is not "functional" but its the only way do move tracks inside a Spotify playlist **/
