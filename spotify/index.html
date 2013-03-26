@@ -50,7 +50,18 @@
             }); 
         }
 
+
         var timestamp = new Date(0); 
+        /** DRY it **/
+        load(timestamp, function (tracks) {
+                if (tracks.length <= 0) return; 
+                timestamp = _.last(tracks).updatedAt;
+                
+                var _all_tracks = _.map(parse_object_href_map, function (parse_track) {
+                    return parse_track;
+                });
+                sortPlaylist(playlist, _all_tracks);
+            });
         var t = setInterval(function () {
             load(timestamp, function (tracks) {
                 if (tracks.length <= 0) return; 
@@ -61,7 +72,7 @@
                 });
                 sortPlaylist(playlist, _all_tracks);
             });
-        }, 1000);
+        }, 10000);
 
  
          // note: you can also customize columns by using
