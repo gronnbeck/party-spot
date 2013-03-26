@@ -15,7 +15,7 @@
 	window.onload = function() {
 		Parse.initialize(config.appid, config.js_key);
 
-		$(".tracks").delegate("li", "tap", function () {
+		$(".tracks").delegate(".up", "tap", function () {
     		var index = $(this).index();
     		var track = all_tracks[index];
     		if (!track) { return };
@@ -47,17 +47,18 @@
 			}).join(", ");
 		}
 		$(".tracks").empty();
-
-		$(".tracks").append("<li data-role='list-divider'>Playlist</li>")
+		
+		// ** xxx fucks up with the indexes **/
+		// $(".tracks").append("<li data-role='list-divider'>Playlist</li>")
 				// fix this later
-		var gear_link = '<a href="#purchase" data-rel="popup" data-position-to="window" data-transition="pop">Purchase album</a>'
+		var gear_link = '<a href="#other" data-rel="popup" data-position-to="window" data-transition="pop">Purchase album</a>'
 		
 		all_tracks = sortByVotes(tracks);
 
 		_.each(all_tracks, function(track) {
 			/** Not optimized , so slow **/
 			$.getJSON(spotifyUrl(track.attributes.href), function (data) {
-				$(".tracks").append("<li><a href='#'>" + data.track.name + "<br/>" +
+				$(".tracks").append("<li><a class='up' href='#'>" + data.track.name + "<br/>" +
 					"<small>" + _artistNames(data.track.artists) + "</small>" +
 					"<span class='ui-li-count'>" + track.attributes.votes + "</span>" + 
 					"</a>" + gear_link + "</li>");
@@ -71,5 +72,13 @@
 
 <ul class="tracks" data-role="listview" data-split-icon="gear">
 </ul>
+
+<div data-role="popup" id="other" data-theme="d" data-overlay-theme="b" class="ui-content" style="max-width:340px; padding-bottom:2em;">
+    <h3>Down vote, really?</h3>
+    <p>You only have a limited down votes. <br/>Are you sure?</p>
+    <a href="index.html" data-role="button" data-rel="back" data-theme="b" data-icon="check" data-inline="true" data-mini="true">Yes!</a>
+    <a href="index.html" data-role="button" data-rel="back" data-inline="true" data-mini="true">No.</a>
+</div>
+
 
 </body>
